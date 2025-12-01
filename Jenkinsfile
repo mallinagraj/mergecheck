@@ -19,7 +19,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Cloning GitHub Repo...'
-                git branch: 'main', url: 'https://github.com/Jayesh7744/mindcircuit13.git'
+                git branch: 'main', url: 'https://github.com/mallinagraj/mergecheck.git'
             }
         }
 
