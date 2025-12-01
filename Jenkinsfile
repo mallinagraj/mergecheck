@@ -36,7 +36,7 @@ pipeline {
                 // Run sonar-scanner using full path
                 sh """
                     ${scannerHome}/bin/sonar-scanner \
-                      -Dsonar.projectKey=test \
+                      -Dsonar.projectKey=amrut \
                       -Dsonar.sources=./src \
                       -Dsonar.host.url=${SONAR_URL} \
                       -Dsonar.login=${SONAR_TOKEN}
