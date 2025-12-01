@@ -10,4 +10,4 @@ FROM tomcat
 WORKDIR webapps
 COPY --from=buildstage /opt/mindcircuit13/target/*.war .
 RUN rm -rf ROOT && mv *.war ROOT.war
-EXPOSE 8080
+EXPOSE 8181
