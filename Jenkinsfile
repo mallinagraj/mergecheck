@@ -11,7 +11,7 @@ pipeline {
     }
 
     environment {
-        SONAR_URL = "http://13.203.195.158:9000"
+        SONAR_URL = "http://13.232.221.191:9000"
     }
 
     stages {
