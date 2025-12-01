@@ -5,7 +5,6 @@ pipeline {
         skipDefaultCheckout()
     }
 
-    
     tools {
         maven 'maven3'
     }
