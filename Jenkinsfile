@@ -9,13 +9,16 @@ pipeline {
         maven 'maven3'
     }
 
-    
     environment {
         SONAR_URL = "http://65.1.100.50:9000"
-        ARTIFACTORY_URL = '13.127.91.182:8081'  // Replace with your EC2 IP
+
+        // JFrog Settings
+        ARTIFACTORY_HOST = '13.127.91.182:8081'
         DOCKER_REPO = 'docker-local'
         IMAGE_NAME = 'my-app'
         IMAGE_TAG = "${BUILD_NUMBER}"
+
+        // Credentials
         ARTIFACTORY_CREDS = credentials('jfrog-test')
     }
 
@@ -29,92 +32,83 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-    environment {
-        SONAR_TOKEN = credentials('sonarqube-token')
-    }
-    steps {
-        script {
-            withSonarQubeEnv('SonarQubeServer') {
-                // Get the full path of the SonarQubeScanner installation
-                def scannerHome = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                
-                // Run sonar-scanner using full path
-                sh """
-                    ${scannerHome}/bin/sonar-scanner \
-                      -Dsonar.projectKey=amrut \
-                      -Dsonar.sources=./src \
-                      -Dsonar.host.url=${SONAR_URL} \
-                      -Dsonar.login=${SONAR_TOKEN}
-                """
+            environment {
+                SONAR_TOKEN = credentials('sonarqube-token')
+            }
+            steps {
+                script {
+                    withSonarQubeEnv('SonarQubeServer') {
+                        def scannerHome = tool name: 'SonarQubeScanner',
+                                               type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                                -Dsonar.projectKey=amrut \
+                                -Dsonar.sources=./src \
+                                -Dsonar.host.url=${SONAR_URL} \
+                                -Dsonar.login=${SONAR_TOKEN}
+                        """
+                    }
+                }
             }
         }
-    }
-}
 
-        stage('Build Docker Image') {
+        stage('Build Maven Artifact') {
+            steps {
+                echo 'Building Maven package...'
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('Build Docker Image for JFrog') {
             steps {
                 script {
                     echo "Building Docker image..."
                     sh """
                         docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:latest
 
-                        
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} \
+                            ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} \
+                            ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:latest
                     """
                 }
             }
         }
 
-        // stage('Login to JFrog') {
-        //     steps {
-        //         script {
-        //             echo "Logging into JFrog Artifactory..."
-        //             sh """
-        //                 echo ${ARTIFACTORY_CREDS_PSW} | docker login ${ARTIFACTORY_URL} -u ${ARTIFACTORY_CREDS_USR} --password-stdin
-                        
-        //             """
-        //         }
-        //     }
-        // }
-
-        stage('Login to JFrog') {
-    steps {
-        script {
-            withCredentials([usernamePassword(credentialsId: 'jfrog-test',
-                                             usernameVariable: 'USR',
-                                             passwordVariable: 'PSW')]) {
-                sh """
-                    echo $PSW | docker login 13.127.91.182:8081 -u $USR --password-stdin
-                """
-            }
-        }
-    }
-}
-        
-        stage('Push to JFrog Artifactory') {
+        stage('Login to JFrog Registry') {
             steps {
                 script {
-                    echo "Pushing Docker image to JFrog..."
-                    sh """
-                        docker push ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
-                        docker push ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:latest
-                    """
-                    echo "✅ Image pushed successfully!"
-                    echo "Image: ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    withCredentials([usernamePassword(credentialsId: 'jfrog-test',
+                        usernameVariable: 'USR', passwordVariable: 'PSW')]) {
+
+                        sh """
+                            echo "$PSW" | docker login ${ARTIFACTORY_HOST} \
+                                -u "$USR" --password-stdin
+                        """
+                    }
                 }
             }
         }
-        stage('Build Artifact') {
+
+        stage('Push Images to JFrog') {
             steps {
-                echo 'Building Maven Artifact...'
-                sh 'mvn clean package'
+                script {
+                    sh """
+                        docker push ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:latest
+                    """
+
+                    echo "Image pushed:"
+                    echo "${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
+                }
             }
         }
 
-        stage('Docker Image Build') {
+        stage('Build DockerHub Image') {
             steps {
-                echo 'Building Docker Image...'
+                echo "Building DockerHub Image..."
                 sh "docker build -t jayesh7744/ultimate-cicd:${BUILD_NUMBER} ."
             }
         }
@@ -122,7 +116,9 @@ pipeline {
         stage('Push to DockerHub') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'dockerhub', variable: 'DOCKERHUB_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'dockerhub',
+                        variable: 'DOCKERHUB_TOKEN')]) {
+
                         sh """
                             echo "${DOCKERHUB_TOKEN}" | docker login -u "jayesh7744" --password-stdin
                             docker push jayesh7744/ultimate-cicd:${BUILD_NUMBER}
@@ -131,12 +127,11 @@ pipeline {
                 }
             }
         }
-
     }
 
     post {
         always {
-            echo "Cleaning up workspace..."
+            echo "Cleaning workspace..."
             cleanWs()
         }
     }
