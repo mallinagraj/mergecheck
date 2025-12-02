@@ -96,9 +96,6 @@ pipeline {
 }
 
 
-                }
-            }
-        }
 
         stage('Push Images to JFrog') {
             steps {
