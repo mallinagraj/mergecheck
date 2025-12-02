@@ -68,10 +68,11 @@ pipeline {
     docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
 
     docker tag ${IMAGE_NAME}:${IMAGE_TAG} \
-        13.127.91.182:8081/artifactory/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
+    13.127.91.182:8081/artifactory/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
 
     docker tag ${IMAGE_NAME}:${IMAGE_TAG} \
-        13.127.91.182:8081/artifactory/docker-local/${IMAGE_NAME}:latest
+    13.127.91.182:8081/artifactory/docker-local/${IMAGE_NAME}:latest
+
 """
 
                 }
@@ -79,15 +80,19 @@ pipeline {
         }
 
         stage('Login to JFrog Registry') {
-            steps {
-                script {
-                   withCredentials([usernamePassword(credentialsId: 'jfrog-test',
-                                   usernameVariable: 'USR',
-                                   passwordVariable: 'PSW')]) {
-    sh """
-        echo "$PSW" | docker login 13.127.91.182:8081 -u "$USR" --password-stdin
-    """
+    steps {
+        script {
+            withCredentials([usernamePassword(credentialsId: 'jfrog-test',
+                                               usernameVariable: 'USR',
+                                               passwordVariable: 'PSW')]) {
+                sh """
+                    echo "$PSW" | docker login 13.127.91.182:8081/artifactory/docker-local -u "$USR" --password-stdin
+                """
+            }
+        }
+    }
 }
+
 
                 }
             }
@@ -99,6 +104,7 @@ pipeline {
                     sh """
     docker push 13.127.91.182:8081/artifactory/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
     docker push 13.127.91.182:8081/artifactory/docker-local/${IMAGE_NAME}:latest
+
 """
 
 
