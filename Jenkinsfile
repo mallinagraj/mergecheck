@@ -11,7 +11,7 @@ pipeline {
 
     
     environment {
-        SONAR_URL = "http://65.1.100.50/:9000"
+        SONAR_URL = "http://65.1.100.50:9000"
         ARTIFACTORY_URL = 'http://13.127.91.182:8081'  // Replace with your EC2 IP
         DOCKER_REPO = 'docker-local'
         IMAGE_NAME = 'my-app'
