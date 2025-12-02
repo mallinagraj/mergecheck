@@ -12,7 +12,7 @@ pipeline {
     
     environment {
         SONAR_URL = "http://65.1.100.50/:9000"
-        ARTIFACTORY_URL = 'your-ec2-ip:8081'  // Replace with your EC2 IP
+        ARTIFACTORY_URL = 'http://13.127.91.182:8081'  // Replace with your EC2 IP
         DOCKER_REPO = 'docker-local'
         IMAGE_NAME = 'my-app'
         IMAGE_TAG = "${BUILD_NUMBER}"
@@ -51,43 +51,43 @@ pipeline {
     }
 }
 
-        // stage('Build Docker Image') {
-        //     steps {
-        //         script {
-        //             echo "Building Docker image..."
-        //             sh """
-        //                 docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-        //                 docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
-        //                 docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:latest
-        //             """
-        //         }
-        //     }
-        // }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    echo "Building Docker image..."
+                    sh """
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:latest
+                    """
+                }
+            }
+        }
 
-        // stage('Login to JFrog') {
-        //     steps {
-        //         script {
-        //             echo "Logging into JFrog Artifactory..."
-        //             sh """
-        //                 echo ${ARTIFACTORY_CREDS_PSW} | docker login ${ARTIFACTORY_URL} -u ${ARTIFACTORY_CREDS_USR} --password-stdin
-        //             """
-        //         }
-        //     }
-        // }
+        stage('Login to JFrog') {
+            steps {
+                script {
+                    echo "Logging into JFrog Artifactory..."
+                    sh """
+                        echo ${ARTIFACTORY_CREDS_PSW} | docker login ${ARTIFACTORY_URL} -u ${ARTIFACTORY_CREDS_USR} --password-stdin
+                    """
+                }
+            }
+        }
         
-        // stage('Push to JFrog Artifactory') {
-        //     steps {
-        //         script {
-        //             echo "Pushing Docker image to JFrog..."
-        //             sh """
-        //                 docker push ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
-        //                 docker push ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:latest
-        //             """
-        //             echo "✅ Image pushed successfully!"
-        //             echo "Image: ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
-        //         }
-        //     }
-        // }
+        stage('Push to JFrog Artifactory') {
+            steps {
+                script {
+                    echo "Pushing Docker image to JFrog..."
+                    sh """
+                        docker push ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:latest
+                    """
+                    echo "✅ Image pushed successfully!"
+                    echo "Image: ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
+                }
+            }
+        }
         stage('Build Artifact') {
             steps {
                 echo 'Building Maven Artifact...'
