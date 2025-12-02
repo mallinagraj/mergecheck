@@ -12,7 +12,7 @@ pipeline {
     
     environment {
         SONAR_URL = "http://65.1.100.50:9000"
-        ARTIFACTORY_URL = 'http://13.127.91.182:8081'  // Replace with your EC2 IP
+        ARTIFACTORY_URL = '13.127.91.182:8081'  // Replace with your EC2 IP
         DOCKER_REPO = 'docker-local'
         IMAGE_NAME = 'my-app'
         IMAGE_TAG = "${BUILD_NUMBER}"
@@ -59,6 +59,8 @@ pipeline {
                         docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
                         docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
                         docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_URL}/${DOCKER_REPO}/${IMAGE_NAME}:latest
+
+                        
                     """
                 }
             }
@@ -70,6 +72,7 @@ pipeline {
                     echo "Logging into JFrog Artifactory..."
                     sh """
                         echo ${ARTIFACTORY_CREDS_PSW} | docker login ${ARTIFACTORY_URL} -u ${ARTIFACTORY_CREDS_USR} --password-stdin
+                        
                     """
                 }
             }
