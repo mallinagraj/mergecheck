@@ -85,11 +85,11 @@ pipeline {
     steps {
         script {
             withCredentials([usernamePassword(credentialsId: 'jfrog-test',
-                                               usernameVariable: 'USR',
-                                               passwordVariable: 'PSW')]) {
-                sh """
-                    echo "$PSW" | docker login 13.127.91.182:8081/artifactory/docker-local -u "$USR" --password-stdin
-                """
+                                             usernameVariable: 'USR',
+                                             passwordVariable: 'PSW')]) {
+                sh '''
+                    echo $PSW | docker login 13.127.91.182:8081 -u $USR --password-stdin
+                '''
             }
         }
     }
