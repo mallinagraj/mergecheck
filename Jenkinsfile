@@ -66,17 +66,31 @@ pipeline {
             }
         }
 
-        stage('Login to JFrog') {
-            steps {
-                script {
-                    echo "Logging into JFrog Artifactory..."
-                    sh """
-                        echo ${ARTIFACTORY_CREDS_PSW} | docker login ${ARTIFACTORY_URL} -u ${ARTIFACTORY_CREDS_USR} --password-stdin
+        // stage('Login to JFrog') {
+        //     steps {
+        //         script {
+        //             echo "Logging into JFrog Artifactory..."
+        //             sh """
+        //                 echo ${ARTIFACTORY_CREDS_PSW} | docker login ${ARTIFACTORY_URL} -u ${ARTIFACTORY_CREDS_USR} --password-stdin
                         
-                    """
-                }
+        //             """
+        //         }
+        //     }
+        // }
+
+        stage('Login to JFrog') {
+    steps {
+        script {
+            withCredentials([usernamePassword(credentialsId: 'jfrog-test',
+                                             usernameVariable: 'USR',
+                                             passwordVariable: 'PSW')]) {
+                sh """
+                    echo $PSW | docker login 13.127.91.182:8081 -u $USR --password-stdin
+                """
             }
         }
+    }
+}
         
         stage('Push to JFrog Artifactory') {
             steps {
