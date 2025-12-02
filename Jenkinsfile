@@ -10,12 +10,12 @@ pipeline {
     }
 
     environment {
-        SONAR_URL = "http://13.232.221.191:9000"
+        SONAR_URL = "http://65.1.100.50/:9000"
         ARTIFACTORY_URL = 'your-ec2-ip:8081'  // Replace with your EC2 IP
         DOCKER_REPO = 'docker-local'
         IMAGE_NAME = 'my-app'
         IMAGE_TAG = "${BUILD_NUMBER}"
-        ARTIFACTORY_CREDS = credentials('artifactory-credentials')
+        ARTIFACTORY_CREDS = credentials('jfrog-test')
     }
 
     stages {
