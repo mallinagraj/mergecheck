@@ -9,6 +9,7 @@ pipeline {
         maven 'maven3'
     }
 
+    
     environment {
         SONAR_URL = "http://65.1.100.50/:9000"
         ARTIFACTORY_URL = 'your-ec2-ip:8081'  // Replace with your EC2 IP
