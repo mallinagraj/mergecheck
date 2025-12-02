@@ -64,15 +64,16 @@ pipeline {
             steps {
                 script {
                     echo "Building Docker image..."
-                    sh """
-                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                   sh """
+    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
 
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} \
-                            ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+    docker tag ${IMAGE_NAME}:${IMAGE_TAG} \
+        13.127.91.182:8081/artifactory/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
 
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} \
-                            ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:latest
-                    """
+    docker tag ${IMAGE_NAME}:${IMAGE_TAG} \
+        13.127.91.182:8081/artifactory/docker-local/${IMAGE_NAME}:latest
+"""
+
                 }
             }
         }
@@ -80,14 +81,14 @@ pipeline {
         stage('Login to JFrog Registry') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'jfrog-test',
-                        usernameVariable: 'USR', passwordVariable: 'PSW')]) {
+                   withCredentials([usernamePassword(credentialsId: 'jfrog-test',
+                                   usernameVariable: 'USR',
+                                   passwordVariable: 'PSW')]) {
+    sh """
+        echo "$PSW" | docker login 13.127.91.182:8081 -u "$USR" --password-stdin
+    """
+}
 
-                        sh """
-                            echo "$PSW" | docker login ${ARTIFACTORY_HOST} \
-                                -u "$USR" --password-stdin
-                        """
-                    }
                 }
             }
         }
@@ -96,9 +97,10 @@ pipeline {
             steps {
                 script {
                     sh """
-                        docker push ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
-                        docker push ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:latest
-                    """
+    docker push 13.127.91.182:8081/artifactory/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
+    docker push 13.127.91.182:8081/artifactory/docker-local/${IMAGE_NAME}:latest
+"""
+
 
                     echo "Image pushed:"
                     echo "${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
