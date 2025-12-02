@@ -9,6 +9,8 @@ pipeline {
         maven 'maven3'
     }
 
+    
+
     environment {
         SONAR_URL = "http://65.1.100.50:9000"
 
