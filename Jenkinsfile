@@ -159,10 +159,10 @@ pipeline {
     environment {
         SONAR_URL = "http://3.111.30.234:9000"
 
-        // JFrog Maven / Docker
+        // JFrog Maven Settings
         ARTIFACTORY_HOST = '13.204.81.100:8081'
-        MVN_REPO = 'maven-local'
-        DOCKER_REPO = 'docker-local'
+        MVN_REPO_RELEASE = 'local'
+        MVN_REPO_SNAPSHOT = 'maven-snapshot'
 
         // DockerHub
         DOCKERHUB_USER = 'jayesh7744'
@@ -208,22 +208,22 @@ pipeline {
             }
         }
 
-       stage('Deploy Maven Artifact to Artifactory') {
-    steps {
-        script {
-            withCredentials([usernamePassword(credentialsId: 'jfrog-test',
-                                             usernameVariable: 'JFROG_USER',
-                                             passwordVariable: 'JFROG_PASSWORD')]) {
-                sh '''
-                    # Create a temporary Maven settings.xml with Artifactory credentials
-                    cat > settings.xml <<EOF
+        stage('Deploy Maven Artifact to Artifactory') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'jfrog-test',
+                                                     usernameVariable: 'JFROG_USER',
+                                                     passwordVariable: 'JFROG_PASSWORD')]) {
+                        sh '''
+                            # Create temporary Maven settings.xml with matching server IDs
+                            cat > settings.xml <<EOF
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
                               http://maven.apache.org/xsd/settings-1.0.0.xsd">
   <servers>
     <server>
-      <id>artifactory-release</id>
+      <id>artifactory</id>
       <username>$JFROG_USER</username>
       <password>$JFROG_PASSWORD</password>
     </server>
@@ -236,13 +236,13 @@ pipeline {
 </settings>
 EOF
 
-                    # Deploy Maven artifact using the temporary settings.xml
-                    mvn deploy -s settings.xml -DskipTests
-                '''
+                            # Deploy artifact using temporary settings
+                            mvn deploy -s settings.xml -DskipTests
+                        '''
+                    }
+                }
             }
         }
-    }
-}
 
         stage('Build DockerHub Image') {
             steps {
@@ -255,10 +255,10 @@ EOF
             steps {
                 script {
                     withCredentials([string(credentialsId: 'dockerhub', variable: 'DOCKERHUB_TOKEN')]) {
-                        sh '''
+                        sh """
                             echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
                             docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
-                        '''
+                        """
                     }
                 }
             }
@@ -271,14 +271,9 @@ EOF
                                                      usernameVariable: 'JFROG_USER',
                                                      passwordVariable: 'JFROG_PASSWORD')]) {
                         sh '''
-                            # Login to JFrog Docker Registry
-                            echo "$JFROG_PASSWORD" | docker login ${ARTIFACTORY_HOST} -u "$JFROG_USER" --password-stdin
-
-                            # Tag Docker image for Artifactory
-                            docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
-
-                            # Push Docker image to JFrog
-                            docker push ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+                            echo "$JFROG_PASSWORD" | docker login 13.204.81.100:8081 -u "$JFROG_USER" --password-stdin
+                            docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} 13.204.81.100:8081/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
+                            docker push 13.204.81.100:8081/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
                         '''
                     }
                 }
