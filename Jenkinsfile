@@ -147,38 +147,32 @@
 
 pipeline {
     agent any
-
+    
     options {
         skipDefaultCheckout()
     }
-
+    
     tools {
         maven 'maven3'
     }
-
+    
     environment {
         SONAR_URL = "http://3.111.30.234:9000"
-
-        // JFrog Maven Settings
-        ARTIFACTORY_HOST = '13.204.81.100:8081'
-        MVN_REPO_RELEASE = 'local'
-        MVN_REPO_SNAPSHOT = 'maven-snapshot'
-
-        // DockerHub
+        ARTIFACTORY_URL = "13.204.81.100:8081"
+        DOCKER_REGISTRY = "13.204.81.100:8081/docker-local"
         DOCKERHUB_USER = 'jayesh7744'
         IMAGE_NAME = 'ultimate-cicd'
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
-
+    
     stages {
-
         stage('Checkout') {
             steps {
                 echo 'Cloning GitHub Repo...'
                 git branch: 'main', url: 'https://github.com/mallinagraj/mergecheck.git'
             }
         }
-
+        
         stage('SonarQube Analysis') {
             environment {
                 SONAR_TOKEN = credentials('sonarqube-token')
@@ -186,9 +180,8 @@ pipeline {
             steps {
                 script {
                     withSonarQubeEnv('SonarQubeServer') {
-                        def scannerHome = tool name: 'SonarQubeScanner',
-                                               type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-
+                        def scannerHome = tool name: 'SonarQubeScanner', 
+                                              type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
                                 -Dsonar.projectKey=amrut \
@@ -200,88 +193,88 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Build Maven Artifact') {
             steps {
                 echo 'Building Maven WAR package...'
                 sh 'mvn clean package -DskipTests'
             }
         }
-
+        
         stage('Deploy Maven Artifact to Artifactory') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'jfrog-test',
-                                                     usernameVariable: 'JFROG_USER',
-                                                     passwordVariable: 'JFROG_PASSWORD')]) {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'jfrog-test', 
+                        usernameVariable: 'JFROG_USER', 
+                        passwordVariable: 'JFROG_PASSWORD')]) {
                         sh '''
-                            # Create temporary Maven settings.xml with matching server IDs
                             cat > settings.xml <<EOF
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
-                              http://maven.apache.org/xsd/settings-1.0.0.xsd">
-  <servers>
-    <server>
-      <id>artifactory</id>
-      <username>$JFROG_USER</username>
-      <password>$JFROG_PASSWORD</password>
-    </server>
-    <server>
-      <id>artifactory-snapshot</id>
-      <username>$JFROG_USER</username>
-      <password>$JFROG_PASSWORD</password>
-    </server>
-  </servers>
+          http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <servers>
+        <server>
+            <id>artifactory</id>
+            <username>${JFROG_USER}</username>
+            <password>${JFROG_PASSWORD}</password>
+        </server>
+    </servers>
 </settings>
 EOF
-
-                            # Deploy artifact using temporary settings
                             mvn deploy -s settings.xml -DskipTests
                         '''
                     }
                 }
             }
         }
-
-        stage('Build DockerHub Image') {
+        
+        stage('Build Docker Image') {
             steps {
-                echo "Building DockerHub image..."
+                echo "Building Docker image..."
                 sh "docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
-
+        
         stage('Push Docker Image to DockerHub') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'dockerhub', variable: 'DOCKERHUB_TOKEN')]) {
+                    withCredentials([string(
+                        credentialsId: 'dockerhub', 
+                        variable: 'DOCKERHUB_TOKEN')]) {
                         sh """
-                            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
+                            echo "\$DOCKERHUB_TOKEN" | docker login -u "\$DOCKERHUB_USER" --password-stdin
                             docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                         """
                     }
                 }
             }
         }
-
-        stage('Push Docker Image to JFrog') {
+        
+        stage('Push Docker Image to JFrog Artifactory') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'jfrog-test',
-                                                     usernameVariable: 'JFROG_USER',
-                                                     passwordVariable: 'JFROG_PASSWORD')]) {
-                        sh '''
-                            echo "$JFROG_PASSWORD" | docker login 13.204.81.100:8081 -u "$JFROG_USER" --password-stdin
-                            docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} 13.204.81.100:8081/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
-                            docker push 13.204.81.100:8081/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
-                        '''
+                    withCredentials([usernamePassword(
+                        credentialsId: 'jfrog-test', 
+                        usernameVariable: 'JFROG_USER', 
+                        passwordVariable: 'JFROG_PASSWORD')]) {
+                        sh """
+                            # Login to JFrog Docker registry using correct endpoint
+                            echo "\$JFROG_PASSWORD" | docker login ${DOCKER_REGISTRY} -u "\$JFROG_USER" --password-stdin
+                            
+                            # Tag image for JFrog
+                            docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                            
+                            # Push to JFrog
+                            docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                        """
                     }
                 }
             }
         }
-
     }
-
+    
     post {
         always {
             echo "Cleaning workspace..."
