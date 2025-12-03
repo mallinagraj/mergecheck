@@ -246,23 +246,26 @@ pipeline {
             }
         }
 
-        stage('Optional: Push Docker to JFrog') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'jfrog-test',
-                                                     usernameVariable: 'JFROG_USER',
-                                                     passwordVariable: 'JFROG_PASSWORD')]) {
-                        sh """
-                            echo $JFROG_PASSWORD | docker login ${ARTIFACTORY_HOST} -u $JFROG_USER --password-stdin
-                            docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_HOST}/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
-                            docker push ${ARTIFACTORY_HOST}/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
-                        """
-                    }
-                }
+stage('Push Docker to JFrog') {
+    steps {
+        script {
+            withCredentials([usernamePassword(credentialsId: 'jfrog-test',
+                                             usernameVariable: 'JFROG_USER',
+                                             passwordVariable: 'JFROG_PASSWORD')]) {
+                sh '''
+                    # Login
+                    echo "$JFROG_PASSWORD" | docker login 13.204.81.100:8081 -u "$JFROG_USER" --password-stdin
+                    
+                    # Tag the image
+                    docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} 13.204.81.100:8081/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
+                    
+                    # Push to JFrog
+                    docker push 13.204.81.100:8081/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
+                '''
             }
         }
     }
-
+}
     post {
         always {
             echo "Cleaning workspace..."
