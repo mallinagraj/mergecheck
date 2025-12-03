@@ -161,8 +161,16 @@ pipeline {
 
         // JFrog Maven Settings
         ARTIFACTORY_HOST = '13.204.81.100:8081'
-        MVN_REPO = 'local'
+        MVN_REPO = 'maven-local'
+
+        // DockerHub
+        DOCKERHUB_USER = 'jayesh7744'
+        IMAGE_NAME = 'ultimate-cicd'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+
+        // Credentials
         ARTIFACTORY_CREDS = credentials('jfrog-test')
+        DOCKERHUB_TOKEN = credentials('dockerhub')
     }
 
     stages {
@@ -198,8 +206,8 @@ pipeline {
 
         stage('Build Maven Artifact') {
             steps {
-                echo 'Building Maven package...'
-                sh 'mvn clean package'
+                echo 'Building Maven WAR package...'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
@@ -209,18 +217,8 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'jfrog-test',
                                                      usernameVariable: 'JFROG_USER',
                                                      passwordVariable: 'JFROG_PASSWORD')]) {
-
-                        // Example for Maven deploy using CLI
                         sh """
-                            mvn deploy:deploy-file \
-                                -Durl=http://${ARTIFACTORY_HOST}/artifactory/${MVN_REPO} \
-                                -DrepositoryId=artifactory \
-                                -Dfile=target/my-app-${BUILD_NUMBER}.jar \
-                                -DgroupId=com.mycompany.app \
-                                -DartifactId=my-app \
-                                -Dversion=${BUILD_NUMBER} \
-                                -Dpackaging=jar \
-                                -DgeneratePom=true \
+                            mvn deploy -DskipTests \
                                 -Dusername=$JFROG_USER \
                                 -Dpassword=$JFROG_PASSWORD
                         """
@@ -229,22 +227,39 @@ pipeline {
             }
         }
 
-        stage('Build DockerHub Image') {
+        stage('Build Docker Image') {
             steps {
-                echo "Building DockerHub Image..."
-                sh "docker build -t jayesh7744/ultimate-cicd:${BUILD_NUMBER} ."
+                echo "Building DockerHub image..."
+                sh """
+                    docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} .
+                """
             }
         }
 
-        stage('Push to DockerHub') {
+        stage('Push Docker Image to DockerHub') {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'dockerhub',
-                        variable: 'DOCKERHUB_TOKEN')]) {
-
+                                            variable: 'DOCKERHUB_TOKEN')]) {
                         sh """
-                            echo "${DOCKERHUB_TOKEN}" | docker login -u "jayesh7744" --password-stdin
-                            docker push jayesh7744/ultimate-cicd:${BUILD_NUMBER}
+                            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
+                            docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Optional: Push Docker to JFrog') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'jfrog-test',
+                                                     usernameVariable: 'JFROG_USER',
+                                                     passwordVariable: 'JFROG_PASSWORD')]) {
+                        sh """
+                            echo $JFROG_PASSWORD | docker login ${ARTIFACTORY_HOST} -u $JFROG_USER --password-stdin
+                            docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_HOST}/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
+                            docker push ${ARTIFACTORY_HOST}/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
                         """
                     }
                 }
@@ -252,8 +267,6 @@ pipeline {
         }
     }
 
-
-    
     post {
         always {
             echo "Cleaning workspace..."
@@ -261,4 +274,3 @@ pipeline {
         }
     }
 }
-
