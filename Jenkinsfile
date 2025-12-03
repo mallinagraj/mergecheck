@@ -211,17 +211,14 @@ pipeline {
             steps {
                 echo 'Deploying WAR to Artifactory using Jenkins credentials...'
                 script {
-                    withCredentials([
-                        usernamePassword(credentialsId: 'jfrog-test',
-                                         usernameVariable: 'JFROG_USER',
-                                         passwordVariable: 'JFROG_PASSWORD'),
-                        file(credentialsId: 'jfrog-settings', variable: 'SETTINGS_XML')
-                    ]) {
-                        sh """
-                            mvn deploy -DskipTests -s $SETTINGS_XML \
-                                -Dusername=$JFROG_USER \
-                                -Dpassword=$JFROG_PASSWORD
-                        """
+                    withCredentials([usernamePassword(credentialsId: 'jfrog-test',
+                                 usernameVariable: 'JFROG_USER',
+                                 passwordVariable: 'JFROG_PASSWORD')]) {
+    sh '''
+        echo "$JFROG_PASSWORD" | docker login 13.204.81.100:8081 -u "$JFROG_USER" --password-stdin
+        docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} 13.204.81.100:8081/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
+        docker push 13.204.81.100:8081/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
+    '''
                     }
                 }
             }
