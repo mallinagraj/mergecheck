@@ -167,10 +167,6 @@ pipeline {
         DOCKERHUB_USER = 'jayesh7744'
         IMAGE_NAME = 'ultimate-cicd'
         IMAGE_TAG = "${BUILD_NUMBER}"
-
-        // Credentials
-        ARTIFACTORY_CREDS = credentials('jfrog-test')
-        DOCKERHUB_TOKEN = credentials('dockerhub')
     }
 
     stages {
@@ -213,17 +209,8 @@ pipeline {
 
         stage('Publish Artifact to JFrog Maven Repo') {
             steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'jfrog-test',
-                                                     usernameVariable: 'JFROG_USER',
-                                                     passwordVariable: 'JFROG_PASSWORD')]) {
-                        sh """
-                            mvn deploy -DskipTests \
-                                -Dusername=$JFROG_USER \
-                                -Dpassword=$JFROG_PASSWORD
-                        """
-                    }
-                }
+                echo 'Deploying WAR to Artifactory...'
+                sh 'mvn deploy -DskipTests -s $WORKSPACE/settings.xml'
             }
         }
 
@@ -239,8 +226,7 @@ pipeline {
         stage('Push Docker Image to DockerHub') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'dockerhub',
-                                            variable: 'DOCKERHUB_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'dockerhub', variable: 'DOCKERHUB_TOKEN')]) {
                         sh """
                             echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
                             docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
