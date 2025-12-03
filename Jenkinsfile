@@ -159,9 +159,10 @@ pipeline {
     environment {
         SONAR_URL = "http://3.111.30.234:9000"
 
-        // JFrog Maven Settings
+        // JFrog Maven / Docker
         ARTIFACTORY_HOST = '13.204.81.100:8081'
         MVN_REPO = 'maven-local'
+        DOCKER_REPO = 'docker-local'
 
         // DockerHub
         DOCKERHUB_USER = 'jayesh7744'
@@ -209,12 +210,16 @@ pipeline {
 
         stage('Deploy Maven Artifact to Artifactory') {
             steps {
-                echo 'Deploying WAR to Artifactory using Jenkins credentials...'
                 script {
                     withCredentials([usernamePassword(credentialsId: 'jfrog-test',
                                                      usernameVariable: 'JFROG_USER',
                                                      passwordVariable: 'JFROG_PASSWORD')]) {
-                        sh 'mvn deploy -DskipTests -Dusername=$JFROG_USER -Dpassword=$JFROG_PASSWORD'
+                        sh '''
+                            mvn deploy -DskipTests \
+                                -DaltDeploymentRepository=artifactory::default::http://13.204.81.100:8081/artifactory/maven-local \
+                                -Dusername=$JFROG_USER \
+                                -Dpassword=$JFROG_PASSWORD
+                        '''
                     }
                 }
             }
@@ -231,10 +236,10 @@ pipeline {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'dockerhub', variable: 'DOCKERHUB_TOKEN')]) {
-                        sh """
+                        sh '''
                             echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
                             docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
-                        """
+                        '''
                     }
                 }
             }
@@ -247,14 +252,14 @@ pipeline {
                                                      usernameVariable: 'JFROG_USER',
                                                      passwordVariable: 'JFROG_PASSWORD')]) {
                         sh '''
-                            # Login to JFrog Docker Registry (HTTP must be allowed in daemon.json)
-                            echo "$JFROG_PASSWORD" | docker login 13.204.81.100:8081 -u "$JFROG_USER" --password-stdin
+                            # Login to JFrog Docker Registry
+                            echo "$JFROG_PASSWORD" | docker login ${ARTIFACTORY_HOST} -u "$JFROG_USER" --password-stdin
 
-                            # Tag the Docker image for Artifactory
-                            docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} 13.204.81.100:8081/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
+                            # Tag Docker image for Artifactory
+                            docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
 
-                            # Push to JFrog
-                            docker push 13.204.81.100:8081/docker-local/${IMAGE_NAME}:${IMAGE_TAG}
+                            # Push Docker image to JFrog
+                            docker push ${ARTIFACTORY_HOST}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
                         '''
                     }
                 }
@@ -270,4 +275,3 @@ pipeline {
         }
     }
 }
-
