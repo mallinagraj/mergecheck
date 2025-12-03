@@ -4,6 +4,7 @@
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
+
     <groupId>com.example</groupId>
     <artifactId>mindcircuitbatch13</artifactId>
     <version>2.246</version>
@@ -16,15 +17,19 @@
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
 
+    <!-- ===============================
+         JFROG ARTIFACTORY CONFIGURATION
+         =============================== -->
     <distributionManagement>
-        <snapshotRepository>
-            <id>artifactory</id>
-            <url>http://13.204.81.100:8081/artifactory/maven-snapshot</url>
-        </snapshotRepository>
         <repository>
             <id>artifactory</id>
-            <url>http://13.204.81.100:8081/artifactory/maven-local</url>
+            <url>http://13.204.81.100:8081/artifactory/local</url>
         </repository>
+
+        <snapshotRepository>
+            <id>artifactory-snapshot</id>
+            <url>http://13.204.81.100:8081/artifactory/maven-snapshot</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <build>
@@ -47,4 +52,5 @@
             </plugin>
         </plugins>
     </build>
+
 </project>
