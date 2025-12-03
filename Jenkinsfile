@@ -208,22 +208,41 @@ pipeline {
             }
         }
 
-        stage('Deploy Maven Artifact to Artifactory') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'jfrog-test',
-                                                     usernameVariable: 'JFROG_USER',
-                                                     passwordVariable: 'JFROG_PASSWORD')]) {
-                        sh '''
-                            mvn deploy -DskipTests \
-                                -DaltDeploymentRepository=artifactory::default::http://13.204.81.100:8081/artifactory/maven-local \
-                                -Dusername=$JFROG_USER \
-                                -Dpassword=$JFROG_PASSWORD
-                        '''
-                    }
-                }
+       stage('Deploy Maven Artifact to Artifactory') {
+    steps {
+        script {
+            withCredentials([usernamePassword(credentialsId: 'jfrog-test',
+                                             usernameVariable: 'JFROG_USER',
+                                             passwordVariable: 'JFROG_PASSWORD')]) {
+                sh '''
+                    # Create a temporary Maven settings.xml with Artifactory credentials
+                    cat > settings.xml <<EOF
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+                              http://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <servers>
+    <server>
+      <id>artifactory-release</id>
+      <username>$JFROG_USER</username>
+      <password>$JFROG_PASSWORD</password>
+    </server>
+    <server>
+      <id>artifactory-snapshot</id>
+      <username>$JFROG_USER</username>
+      <password>$JFROG_PASSWORD</password>
+    </server>
+  </servers>
+</settings>
+EOF
+
+                    # Deploy Maven artifact using the temporary settings.xml
+                    mvn deploy -s settings.xml -DskipTests
+                '''
             }
         }
+    }
+}
 
         stage('Build DockerHub Image') {
             steps {
