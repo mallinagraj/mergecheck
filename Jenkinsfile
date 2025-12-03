@@ -12,11 +12,11 @@
     
 
 //     environment {
-//         SONAR_URL = "http://65.1.100.50:9000"
+//         SONAR_URL = "http://3.111.30.234:9000"
 
 //         // JFrog Settings
-//         ARTIFACTORY_HOST = '13.127.91.182:8081'
-//         DOCKER_REPO = 'docker-local'
+//         ARTIFACTORY_HOST = '13.204.81.100:8081'
+//         DOCKER_REPO = 'local'
 //         IMAGE_NAME = 'my-app'
 //         IMAGE_TAG = "${BUILD_NUMBER}"
 
@@ -159,11 +159,11 @@ pipeline {
     }
 
     environment {
-        SONAR_URL = "http://65.1.100.50:9000"
+        SONAR_URL = "http://3.111.30.234:9000"
 
         // JFrog Maven Settings
-        ARTIFACTORY_HOST = '13.127.91.182:8081'
-        MVN_REPO = 'maven-local'
+        ARTIFACTORY_HOST = '13.204.81.100:8081'
+        MVN_REPO = 'local'
         ARTIFACTORY_CREDS = credentials('jfrog-test')
     }
 
