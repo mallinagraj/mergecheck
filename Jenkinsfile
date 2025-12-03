@@ -209,8 +209,21 @@ pipeline {
 
         stage('Publish Artifact to JFrog Maven Repo') {
             steps {
-                echo 'Deploying WAR to Artifactory...'
-                sh 'mvn deploy -DskipTests -s $WORKSPACE/settings.xml'
+                echo 'Deploying WAR to Artifactory using Jenkins credentials...'
+                script {
+                    withCredentials([
+                        usernamePassword(credentialsId: 'jfrog-test',
+                                         usernameVariable: 'JFROG_USER',
+                                         passwordVariable: 'JFROG_PASSWORD'),
+                        file(credentialsId: 'jfrog-settings', variable: 'SETTINGS_XML')
+                    ]) {
+                        sh """
+                            mvn deploy -DskipTests -s $SETTINGS_XML \
+                                -Dusername=$JFROG_USER \
+                                -Dpassword=$JFROG_PASSWORD
+                        """
+                    }
+                }
             }
         }
 
