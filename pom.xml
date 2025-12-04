@@ -2,36 +2,35 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
     <modelVersion>4.0.0</modelVersion>
-
     <groupId>com.example</groupId>
     <artifactId>mindcircuitbatch13</artifactId>
     <version>2.246</version>
     <packaging>war</packaging>
-
+    
     <properties>
         <docker.image.prefix>kammana</docker.image.prefix>
-        <sonar.host.url>http://3.111.30.234:9090/</sonar.host.url>
+        <sonar.host.url>http://3.110.136.214:9090/</sonar.host.url>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
-
+    
     <!-- ===============================
          JFROG ARTIFACTORY CONFIGURATION
          =============================== -->
     <distributionManagement>
         <repository>
             <id>artifactory</id>
-            <url>http://13.204.81.100:8081/artifactory/local</url>
+            <name>Artifactory Release Repository</name>
+            <url>http://3.109.200.182:8081/artifactory/libs-release-local</url>
         </repository>
-
         <snapshotRepository>
-            <id>artifactory-snapshot</id>
-            <url>http://13.204.81.100:8081/artifactory/maven-snapshot</url>
+            <id>artifactory</id>
+            <name>Artifactory Snapshot Repository</name>
+            <url>http://3.109.200.182:8081/artifactory/libs-snapshot-local</url>
         </snapshotRepository>
     </distributionManagement>
-
+    
     <build>
         <plugins>
             <!-- Maven WAR Plugin -->
@@ -43,7 +42,7 @@
                     <failOnMissingWebXml>false</failOnMissingWebXml>
                 </configuration>
             </plugin>
-
+            
             <!-- Maven Deploy Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -52,5 +51,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
