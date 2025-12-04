@@ -157,9 +157,9 @@ pipeline {
     }
     
     environment {
-        SONAR_URL = "http://3.111.30.234:9000"
-        ARTIFACTORY_URL = "13.204.81.100:8081"
-        DOCKER_REGISTRY = "13.204.81.100:8081/docker-local"
+        SONAR_URL = "http://3.110.136.214:9000"
+        ARTIFACTORY_URL = "3.109.200.182:8081"
+        DOCKER_REGISTRY = "3.109.200.182:8081/docker-local"
         DOCKERHUB_USER = 'jayesh7744'
         IMAGE_NAME = 'ultimate-cicd'
         IMAGE_TAG = "${BUILD_NUMBER}"
