@@ -158,8 +158,7 @@ pipeline {
     
     environment {
         SONAR_URL = "http://3.110.136.214:9000"
-        ARTIFACTORY_URL = "3.109.200.182:8081"
-        DOCKER_REGISTRY = "3.109.200.182:8081/docker-local"
+        ARTIFACTORY_URL = "http://3.109.200.182:8081/artifactory"
         DOCKERHUB_USER = 'jayesh7744'
         IMAGE_NAME = 'ultimate-cicd'
         IMAGE_TAG = "${BUILD_NUMBER}"
@@ -201,29 +200,39 @@ pipeline {
             }
         }
         
-        stage('Deploy Maven Artifact to Artifactory') {
+        stage('Deploy WAR to Artifactory') {
             steps {
                 script {
                     withCredentials([usernamePassword(
                         credentialsId: 'jfrog-test', 
                         usernameVariable: 'JFROG_USER', 
                         passwordVariable: 'JFROG_PASSWORD')]) {
+                        
                         sh '''
-                            cat > settings.xml <<EOF
-<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
-          http://maven.apache.org/xsd/settings-1.0.0.xsd">
-    <servers>
-        <server>
-            <id>artifactory</id>
-            <username>${JFROG_USER}</username>
-            <password>${JFROG_PASSWORD}</password>
-        </server>
-    </servers>
-</settings>
-EOF
-                            mvn deploy -s settings.xml -DskipTests
+                            # Find the WAR file
+                            WAR_FILE=$(find target -name '*.war' -type f | head -n 1)
+                            
+                            if [ -z "$WAR_FILE" ]; then
+                                echo "ERROR: No WAR file found in target directory"
+                                exit 1
+                            fi
+                            
+                            WAR_NAME=$(basename $WAR_FILE)
+                            echo "Found WAR file: $WAR_NAME"
+                            echo "Uploading to Artifactory..."
+                            
+                            # Upload WAR file directly to Artifactory using cURL
+                            curl -v -u ${JFROG_USER}:${JFROG_PASSWORD} \
+                                 -X PUT \
+                                 "http://3.109.200.182:8081/artifactory/libs-release-local/${WAR_NAME}" \
+                                 -T $WAR_FILE
+                            
+                            if [ $? -eq 0 ]; then
+                                echo "✓ Successfully uploaded WAR to Artifactory"
+                            else
+                                echo "✗ Failed to upload WAR to Artifactory"
+                                exit 1
+                            fi
                         '''
                     }
                 }
@@ -244,30 +253,9 @@ EOF
                         credentialsId: 'dockerhub', 
                         variable: 'DOCKERHUB_TOKEN')]) {
                         sh """
-                            echo "\$DOCKERHUB_TOKEN" | docker login -u "\$DOCKERHUB_USER" --password-stdin
+                            echo "\$DOCKERHUB_TOKEN" | docker login -u ${DOCKERHUB_USER} --password-stdin
                             docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
-                        """
-                    }
-                }
-            }
-        }
-        
-        stage('Push Docker Image to JFrog Artifactory') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'jfrog-test', 
-                        usernameVariable: 'JFROG_USER', 
-                        passwordVariable: 'JFROG_PASSWORD')]) {
-                        sh """
-                            # Login to JFrog Docker registry using correct endpoint
-                            echo "\$JFROG_PASSWORD" | docker login ${DOCKER_REGISTRY} -u "\$JFROG_USER" --password-stdin
-                            
-                            # Tag image for JFrog
-                            docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
-                            
-                            # Push to JFrog
-                            docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                            echo "✓ Successfully pushed Docker image to DockerHub"
                         """
                     }
                 }
@@ -276,6 +264,14 @@ EOF
     }
     
     post {
+        success {
+            echo "✓ Pipeline completed successfully!"
+            echo "WAR artifact: Available in Artifactory"
+            echo "Docker image: ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
+        }
+        failure {
+            echo "✗ Pipeline failed. Check the logs above."
+        }
         always {
             echo "Cleaning workspace..."
             cleanWs()
